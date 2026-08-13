@@ -1,0 +1,572 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --edge: 20px;
+  --shadow-text: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* Background lives on <html> only; body painting one too would sit over
+   .hero-bg, which is pinned at a negative z-index. */
+html { background: #0b0b0b; }
+
+body {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #fff;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- background: stacked, cycling, panning layers ---------- */
+
+.hero-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  background: #0b0b0b;
+  overflow: hidden;
+}
+
+/* Each layer fills the viewport exactly by stretching non-uniformly
+   (background-size: 100% 100%) rather than cropping (cover) or
+   letterboxing (contain) — the full image is always visible with no gaps
+   on the sides, at the cost of some horizontal/vertical distortion.
+   background.js toggles .is-active to crossfade between layers when more
+   than one is configured. .has-motion + .pan-x/.pan-y (opt-in per layer)
+   add a slow drift for gifs that should move. */
+.bg-layer {
+  position: absolute;
+  inset: 0;
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 1.6s ease;
+  will-change: opacity;
+}
+
+.bg-layer.is-active { opacity: 1; }
+
+/* Oversized so a pan has room to move without exposing an edge - a plain
+   100%-stretched layer has no slack to translate into otherwise. */
+.bg-layer.has-motion { inset: -5%; }
+.bg-layer.has-motion.pan-x { animation: pan-x var(--pan-duration, 26s) ease-in-out infinite alternate; }
+.bg-layer.has-motion.pan-y { animation: pan-y var(--pan-duration, 26s) ease-in-out infinite alternate; }
+
+@keyframes pan-x {
+  from { transform: translateX(-4%); }
+  to   { transform: translateX(4%); }
+}
+
+@keyframes pan-y {
+  from { transform: translateY(-4%); }
+  to   { transform: translateY(4%); }
+}
+
+/* Top and bottom only, so the fixed UI stays readable while the middle -
+   where the image itself is the point - stays clear. */
+.scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.5) 100%);
+}
+
+main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100dvh;
+  padding: calc(var(--edge) + env(safe-area-inset-top)) var(--edge) calc(var(--edge) + env(safe-area-inset-bottom));
+  overflow: hidden;
+}
+
+/* ---------- top bar ---------- */
+
+.clock,
+.links {
+  position: fixed;
+  top: calc(var(--edge) + env(safe-area-inset-top));
+  /* Above .meme-stage (z-index 25) so these stay visible/clickable even
+     when the full-viewport meme overlay is active. */
+  z-index: 30;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Its own small glass chip rather than plain drop-shadowed text - a
+   digital-watch-face feel that reads clearly regardless of what's behind
+   it in the background image. */
+.clock {
+  left: var(--edge);
+  display: inline-flex;
+  align-items: baseline;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(20, 20, 22, 0.44);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.clock .colon { animation: blink 1s step-end infinite; }
+.clock .meridiem { margin-left: 5px; font-size: 12px; color: rgba(255, 255, 255, 0.6); }
+
+@keyframes blink { 50% { opacity: 0; } }
+
+.links {
+  right: var(--edge);
+  display: flex;
+  gap: 8px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.pill:hover { opacity: 0.8; }
+.pill:active { transform: scale(0.95); }
+.pill-arrow { display: inline-flex; rotate: -45deg; opacity: 0.5; transition: opacity 0.2s ease; }
+.pill:hover .pill-arrow { opacity: 0.9; }
+
+/* ---------- player ---------- */
+
+.player {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--edge) + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: min(576px, calc(100vw - var(--edge) * 2));
+  padding: 14px 18px;
+  border-radius: 999px;
+  background: rgba(20, 20, 22, 0.48);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  /* Glossy top edge, like light catching a curved glass surface. */
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* the disc */
+
+.disc {
+  position: relative;
+  flex: 0 0 auto;
+  width: 80px;
+  height: 80px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #1a1a1a;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  animation: spin 7s linear infinite;
+  animation-play-state: paused;
+  transition: box-shadow 0.3s ease;
+}
+
+.player.is-playing .disc {
+  animation-play-state: running;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+/* ---------- loading skeleton ---------- */
+/* Shown from page load until the player actually has track data (see
+   renderTrack() in app.js) — a pulsing disc and shimmering text bars read
+   as "working on it" far better than a static blank circle and the word
+   "Loading…" sitting there. */
+
+.player.is-loading .disc { animation: disc-pulse 1.6s ease-in-out infinite; }
+
+@keyframes disc-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.85; }
+}
+
+.player.is-loading .title,
+.player.is-loading .artist {
+  color: transparent;
+  border-radius: 5px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.08) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.08) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.player.is-loading .title { width: 60%; height: 15px; }
+.player.is-loading .artist { width: 38%; height: 12px; margin-top: 7px; }
+
+@keyframes shimmer {
+  0% { background-position: 150% 0; }
+  100% { background-position: -150% 0; }
+}
+
+.disc img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.disc-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0 2px, rgba(0,0,0,0.05) 2px 4px),
+    linear-gradient(115deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 38%, rgba(255,255,255,0) 62%, rgba(255,255,255,0.14) 100%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.disc-hole {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 26%;
+  height: 26%;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: rgba(18, 16, 15, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), 0 0 0 3px rgba(255,255,255,0.06);
+}
+
+@keyframes spin { to { rotate: 360deg; } }
+
+/* meta */
+
+.meta { flex: 1 1 auto; min-width: 0; }
+
+.title,
+.artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title { font-size: 16px; font-weight: 650; letter-spacing: -0.015em; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
+.artist { margin-top: 1px; font-size: 14px; color: rgba(255,255,255,0.7); }
+
+.seek {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 14px;
+  margin: 6px 0 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.seek::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #fff var(--progress, 0%), rgba(255,255,255,0.28) var(--progress, 0%));
+}
+
+.seek::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #fff var(--progress, 0%), rgba(255,255,255,0.28) var(--progress, 0%));
+}
+
+.seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.seek::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.player:hover .seek::-webkit-slider-thumb,
+.seek:focus-visible::-webkit-slider-thumb { opacity: 1; }
+.player:hover .seek::-moz-range-thumb,
+.seek:focus-visible::-moz-range-thumb { opacity: 1; }
+
+.time {
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.65);
+  font-variant-numeric: tabular-nums;
+}
+
+/* controls */
+
+.controls { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; }
+
+.ctl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.1s ease, background 0.2s ease;
+}
+
+.ctl:hover { background: rgba(255,255,255,0.12); }
+.ctl:active { transform: scale(0.92); }
+.ctl:disabled { opacity: 0.35; cursor: default; }
+.ctl:disabled:hover { background: transparent; }
+
+.ctl.play {
+  width: 52px;
+  height: 52px;
+  background: #fff;
+  color: #16130f;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.28);
+}
+
+.ctl.play:hover { background: #fff; opacity: 0.9; }
+
+.ctl.play .i-pause { display: none; }
+.player.is-playing .ctl.play .i-play { display: none; }
+.player.is-playing .ctl.play .i-pause { display: block; }
+
+:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+/* hidden youtube host */
+
+.yt-host {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  bottom: 0;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* ---------- mode toggle ---------- */
+
+.mode-toggle {
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* Player card fades/hides while a meme is up front; toggled from app.js
+   rather than a body class, so nothing else on the page needs to know. */
+.player.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------- meme stage ---------- */
+
+/* Full-viewport backdrop so the vertical video reads as the focal point.
+   background-image is empty for now — set it to a real file (e.g.
+   url("/meme-bg.jpg")) once you have one; background-blend-mode darkens
+   it against the tint automatically so text/controls stay readable
+   without needing a separate dim layer. A backdrop blur keeps it in the
+   same glassy family as the player/clock chrome instead of a flat scrim. */
+.meme-stage {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  align-items: center;
+  justify-content: center;
+  padding: var(--edge);
+  background-color: rgba(0, 0, 0, 0.6);
+  background-image: none;
+  background-size: cover;
+  background-position: center;
+  background-blend-mode: darken;
+  backdrop-filter: blur(28px) saturate(120%);
+  -webkit-backdrop-filter: blur(28px) saturate(120%);
+}
+
+.meme-stage.is-active { display: flex; }
+
+.meme-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Title sits above the frame instead of squeezed between the nav
+   buttons, so it can actually be read instead of ellipsized to a few
+   words. Width matches .meme-frame's own clamp so it never outgrows it. */
+.meme-caption {
+  min-width: 0;
+  max-width: min(92vw, calc((88dvh - 118px) * 9 / 16));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: #fff;
+  text-shadow: var(--shadow-text);
+}
+
+/* Sized to fill as much of the viewport as it can while staying inside
+   BOTH width and height limits without distorting the 9:16 ratio: the
+   calc() term converts the height budget into its equivalent width, and
+   min() picks whichever bound is tighter. Room is reserved above/below
+   for --edge padding, .meme-caption and .meme-controls (~118px total)
+   so the whole card never overflows the screen together. */
+.meme-frame {
+  width: min(92vw, calc((88dvh - 118px) * 9 / 16));
+  aspect-ratio: 9 / 16;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  transition: opacity 0.2s ease;
+}
+
+/* Toggled briefly by app.js around loadVideoById() so switching memes
+   reads as a soft crossfade rather than a hard jump-cut. */
+.meme-frame.is-switching { opacity: 0.25; }
+
+.meme-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.meme-controls {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(20, 20, 22, 0.5);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.meme-controls .ctl { color: #fff; }
+
+/* Progress dots, iOS-carousel style: the active meme's dot elongates
+   into a short pill rather than just changing color, so position in
+   the list stays legible at a glance without a "1/4" counter. */
+.meme-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meme-dots.is-hidden { display: none; }
+
+.meme-dots .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.35);
+  transition: width 0.25s ease, background 0.25s ease;
+}
+
+.meme-dots .dot.is-active {
+  width: 16px;
+  background: #fff;
+}
+
+/* Closes back to song mode. Redundant with #mode-toggle (still visible
+   above the stage, z-index 30) but sits right on the card itself where
+   a modal-style "back" affordance is expected. */
+.meme-close {
+  position: absolute;
+  top: calc(var(--edge) + env(safe-area-inset-top));
+  left: var(--edge);
+  z-index: 26;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(20, 20, 22, 0.5);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.meme-close:hover { opacity: 0.8; }
+.meme-close:active { transform: scale(0.92); }
+
+/* ---------- mobile ---------- */
+
+@media (max-width: 767px) {
+  :root { --edge: 16px; }
+
+  .pill { padding: 10px; }
+  .pill-label, .pill-arrow { display: none; }
+
+  .player {
+    gap: 12px;
+    padding: 10px 12px;
+  }
+
+  .disc { width: 68px; height: 68px; }
+  .title { font-size: 15px; }
+  .artist { font-size: 13px; }
+  .ctl { width: 32px; height: 32px; }
+  .ctl.play { width: 48px; height: 48px; }
+  .seek::-webkit-slider-thumb { opacity: 1; }
+  .seek::-moz-range-thumb { opacity: 1; }
+
+  .meme-caption { font-size: 15px; max-width: min(88vw, calc((88dvh - 108px) * 9 / 16)); }
+  .meme-frame { width: min(88vw, calc((88dvh - 108px) * 9 / 16)); }
+}
+
+@media (max-width: 400px) {
+  .controls { gap: 2px; }
+  .ctl { width: 30px; height: 30px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disc, .bg-layer { animation: none !important; }
+}

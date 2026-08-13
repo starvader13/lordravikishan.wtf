@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Keep this in sync with SITE_NAME in config.js — it can't be templated
+     without a build step, so it's set in both places by hand. -->
+<title>Lord Ravi Kishan Playlist</title>
+<meta name="description" content="Lord Ravi Kishan Playlist — a Bhojpuri playlist, played over a moving gif background.">
+<meta name="theme-color" content="#0b0b0b">
+<!-- Opens the connection to YouTube's servers before the iframe API script
+     is even requested, so the actual fetch that follows skips DNS/TLS
+     setup — shaves real time off how long the player takes to become
+     interactive. -->
+<link rel="preconnect" href="https://www.youtube.com">
+<link rel="preconnect" href="https://i.ytimg.com" crossorigin>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<!-- Stack of full-bleed background layers, built from BACKGROUND_LAYERS in
+     config.js. background.js cycles which one is .is-active (crossfade)
+     and each layer pans itself via .pan-x/.pan-y when motion is set. -->
+<div class="hero-bg" id="hero-bg" aria-hidden="true">
+  <div class="scrim"></div>
+</div>
+
+<main>
+  <div class="clock" id="clock" aria-hidden="true">
+    <span id="clock-h">12</span><span class="colon">:</span><span id="clock-m">00</span><span class="meridiem" id="clock-ap">pm</span>
+  </div>
+
+  <div class="links">
+    <button class="pill mode-toggle" id="mode-toggle" type="button" aria-label="Switch to memes">
+      <span id="mode-toggle-icon" aria-hidden="true">🎭</span>
+      <span class="pill-label" id="mode-toggle-label">Memes</span>
+    </button>
+    <a class="pill" id="yt-link" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener noreferrer" aria-label="Open on YouTube">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8ZM9.6 15.6V8.4l6.2 3.6-6.2 3.6Z"/></svg>
+      <span class="pill-label">YouTube</span>
+      <span class="pill-arrow" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </span>
+    </a>
+  </div>
+
+  <section class="player is-loading" id="player-card" aria-label="Now playing">
+    <div class="disc" id="disc">
+      <img id="cover" src="" alt="" width="640" height="640">
+      <span class="disc-sheen" aria-hidden="true"></span>
+      <span class="disc-hole" aria-hidden="true"></span>
+    </div>
+
+    <div class="meta">
+      <div class="title" id="track-title">Loading&hellip;</div>
+      <div class="artist" id="track-artist"></div>
+      <input class="seek" id="seek" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek">
+      <div class="time"><span id="elapsed">0:00</span> / <span id="duration">0:00</span></div>
+    </div>
+
+    <div class="controls">
+      <button class="ctl" id="prev" type="button" aria-label="Previous track">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14l-11-7z"/></svg>
+      </button>
+      <button class="ctl play" id="play" type="button" aria-label="Play">
+        <svg class="i-play" width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg class="i-pause" width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
+      </button>
+      <button class="ctl" id="next" type="button" aria-label="Next track">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5l11 7-11 7z"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- Our own iframe rather than one the YouTube API builds for us, so we
+       keep control of the allow list. picture-in-picture must be denied by
+       name - omitting it from allow still lets Chrome pop a mini player. -->
+  <div class="yt-host" aria-hidden="true">
+    <iframe
+      id="yt-player"
+      title="Audio player"
+      allow="autoplay; encrypted-media; picture-in-picture 'none'"
+      frameborder="0"
+      tabindex="-1"></iframe>
+  </div>
+
+  <!-- Meme mode: a visible Shorts player, front and center, with YouTube's
+       own controls (unlike the hidden song iframe, you're meant to look at
+       and interact with this one). Toggled by #mode-toggle in app.js. -->
+  <section class="meme-stage" id="meme-stage" aria-label="Meme">
+    <button class="meme-close" id="meme-close" type="button" aria-label="Back to song">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <div class="meme-card">
+      <div class="meme-caption" id="meme-caption"></div>
+      <div class="meme-frame" id="meme-frame">
+        <iframe
+          id="meme-player"
+          title="Meme video"
+          allow="autoplay; encrypted-media; picture-in-picture 'none'"
+          frameborder="0"></iframe>
+      </div>
+      <div class="meme-controls">
+        <button class="ctl" id="meme-prev" type="button" aria-label="Previous meme">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14l-11-7z"/></svg>
+        </button>
+        <div class="meme-dots" id="meme-dots" aria-hidden="true"></div>
+        <button class="ctl" id="meme-next" type="button" aria-label="Next meme">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5l11 7-11 7z"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- config.js must load first: app.js and background.js reference its
+     globals directly (no build step/imports, just script order). -->
+<script src="/config.js" defer></script>
+<script src="/background.js" defer></script>
+<script src="/app.js" defer></script>
+</body>
+</html>
