@@ -56,6 +56,38 @@ let memeReady = false;
 let memeIndex = 0;
 let mode = "song"; // "song" | "meme"
 
+/* ---------------------------------------------------------------
+   Party mode (screen shake)
+   ---------------------------------------------------------------
+   Purely cosmetic layer over whatever's actually playing — see
+   .is-shaking in styles.css. Driven from the song and meme players'
+   onStateChange below, not from mode switches directly, so it only
+   kicks in while something is truly playing (not just whichever tab
+   is open).
+   --------------------------------------------------------------- */
+
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let shakeTimer = null;
+
+function scheduleShake() {
+  const delay = 6000 + Math.random() * 6000; // every 6-12s while the party's on
+  shakeTimer = setTimeout(() => {
+    document.body.classList.add("is-shaking");
+    setTimeout(() => document.body.classList.remove("is-shaking"), 400);
+    scheduleShake();
+  }, delay);
+}
+
+function setPartyMode(active) {
+  if (active) {
+    if (!reducedMotion && !shakeTimer) scheduleShake();
+  } else {
+    clearTimeout(shakeTimer);
+    shakeTimer = null;
+    document.body.classList.remove("is-shaking");
+  }
+}
+
 function fmt(seconds) {
   if (!isFinite(seconds) || seconds < 0) seconds = 0;
   const m = Math.floor(seconds / 60);
@@ -207,6 +239,12 @@ function loadMeme(i) {
    other, so the song and a meme's own audio are never both running. */
 function setMode(next) {
   if (next === mode) return;
+  // Reset unconditionally rather than relying on the outgoing player's own
+  // pause event: that event lands after `mode` has already flipped below,
+  // so a mode-gated setPartyMode(false) there would silently no-op and,
+  // if the incoming player isn't ready yet to fire its own PLAYING event,
+  // leave the page shaking forever with nothing playing.
+  setPartyMode(false);
   mode = next;
 
   if (mode === "meme") {
@@ -277,9 +315,11 @@ window.onYouTubeIframeAPIReady = function () {
           card.classList.add("is-playing");
           playBtn.setAttribute("aria-label", "Pause");
           el("duration").textContent = fmt(player.getDuration());
+          if (mode === "song") setPartyMode(true);
         } else {
           card.classList.remove("is-playing");
           playBtn.setAttribute("aria-label", "Play");
+          if (mode === "song") setPartyMode(false);
         }
 
         if ("mediaSession" in navigator) {
@@ -305,6 +345,7 @@ window.onYouTubeIframeAPIReady = function () {
       onStateChange: (e) => {
         // Auto-advance through the meme list, the way a Shorts feed does.
         if (e.data === YT.PlayerState.ENDED) loadMeme(memeIndex + 1);
+        if (mode === "meme") setPartyMode(e.data === YT.PlayerState.PLAYING);
       },
     },
   });
