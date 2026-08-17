@@ -33,8 +33,8 @@ const SITE_NAME = "Lord Ravi Kishan Playlist";
    list individual video ids in TRACKS. Title/artist here are hand-typed
    like roadways.wtf does, because YouTube's own video titles are rarely
    clean enough to show in a one-line player pill. */
-const PLAYLIST_ID = "PLbLakOgKWDq4"; // "ravi lord", 25 videos
-const PLAYLIST_START_VIDEO_ID = "r4Ca_3l9o4Q"; // "Lehariya Luta Ae Raja"
+const PLAYLIST_ID = "PLf1achqDjOnY";
+const PLAYLIST_START_VIDEO_ID = "cn33v1dw5Fs";
 
 const TRACKS = [
   { youtubeId: "dQw4w9WgXcQ", title: "Never Gonna Give You Up", artist: "Rick Astley" },
@@ -49,6 +49,7 @@ const TRACKS = [
    iframe) with their own sound. Grab the id from the Shorts URL:
      https://www.youtube.com/shorts/<11-char-id> */
 const MEMES = [
+  { youtubeId: "rXgxKAdWNns", caption: "TODO: caption" },
   { youtubeId: "Lsc6QBj29ts", caption: "Okay I promise this is the last one 😂" },
   { youtubeId: "DgR5ucS4rJY", caption: "You have to do it bro" },
   { youtubeId: "rP0TRyZtjsk", caption: "Ravi Kishan Singing in White Outfit" },
