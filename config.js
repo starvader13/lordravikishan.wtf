@@ -24,10 +24,8 @@ const SITE_NAME = "Lord Ravi Kishan Playlist";
 
    PLAYLIST_START_VIDEO_ID must be one of the playlist's own video ids
    (the embed needs a real starting video, not just the playlist id —
-   see the comment above embedUrl() in app.js for why). Shuffle is on
-   by default (player.setShuffle(true) in app.js), so this only decides
-   which track plays first each visit — everything after it via
-   next/previous follows shuffle order.
+   see the comment above embedUrl() in app.js for why). Playback plays
+   through in the playlist's own order starting from this video.
 
    Option B (used below as a placeholder): leave PLAYLIST_ID empty and
    list individual video ids in TRACKS. Title/artist here are hand-typed
@@ -49,7 +47,7 @@ const TRACKS = [
    iframe) with their own sound. Grab the id from the Shorts URL:
      https://www.youtube.com/shorts/<11-char-id> */
 const MEMES = [
-  { youtubeId: "rXgxKAdWNns", caption: "TODO: caption" },
+  { youtubeId: "rXgxKAdWNns", caption: "Lord Ravi Kishan top memes" },
   { youtubeId: "Lsc6QBj29ts", caption: "Okay I promise this is the last one 😂" },
   { youtubeId: "DgR5ucS4rJY", caption: "You have to do it bro" },
   { youtubeId: "rP0TRyZtjsk", caption: "Ravi Kishan Singing in White Outfit" },

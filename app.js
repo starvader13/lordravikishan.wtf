@@ -298,9 +298,6 @@ window.onYouTubeIframeAPIReady = function () {
           // so pull it directly rather than waiting for a state change.
           const data = player.getVideoData() || {};
           renderTrack(data.video_id, data.title, data.author);
-          // On by default — the site always starts on PLAYLIST_START_VIDEO_ID,
-          // but nextVideo()/previousVideo() from here on follow shuffle order.
-          player.setShuffle(true);
         }
       },
       onStateChange: (e) => {
