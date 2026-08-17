@@ -11,7 +11,7 @@
    =================================================================== */
 
 /* Shown in the browser tab and appended to the now-playing title. */
-const SITE_NAME = "Lord Ravi Kishan Playlist";
+const SITE_NAME = "Lord Ravi Kishan Playlist and Memes";
 
 /* ---------------------------------------------------------------
    Song playlist
